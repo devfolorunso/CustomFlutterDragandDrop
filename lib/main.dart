@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class Slot {
   final int id;
@@ -16,7 +16,14 @@ class User {
   User(this.id, this.name);
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+   createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   final List<User> users = List.generate(
     10,
     (index) => User(index, 'User ${index + 1} Jonathan'),
@@ -28,6 +35,34 @@ class MyApp extends StatelessWidget {
     (index) => Slot(index, []),
   );
 
+  bool showBodySideBySide = true;
+
+//
+  void toggleBody() {
+    setState(() {
+      showBodySideBySide = !showBodySideBySide;
+    });
+  }
+
+//
+  void printSlotAllocation() {
+    final Map<String, List<String>> slotAllocation = {};
+
+    for (int i = 0; i < slots.length; i++) {
+      final slot = slots[i];
+      final List<String> userNames = [];
+
+      for (int j = 0; j < slot.users.length; j++) {
+        final user = slot.users[j];
+        userNames.add("${user.id}");
+      }
+
+      slotAllocation["Slot ${slot.id + 1}"] = userNames;
+    }
+
+    print(slotAllocation);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -35,13 +70,46 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Drag and Drop Gymnastics'),
         ),
-        body: Row(
-          children: [
-            UserList(users: users),
-            SlotList(maxSlots: maxSlots, slots: slots),
-          ],
+        body: showBodySideBySide ? buildBodySideBySide() : buildBodyTopBottom(),
+        floatingActionButton: FloatingActionButton(
+          onPressed: toggleBody,
+          child: const Icon(Icons.swap_horiz),
         ),
       ),
+    );
+  }
+
+//
+  Widget buildBodySideBySide() {
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              UserList(users: users),
+              SlotList(
+                maxSlots: maxSlots,
+                slots: slots,
+                showBodySideBySide: showBodySideBySide,
+              ),
+            ],
+          ),
+        ),
+        PrintSlotAllocationButton(slots: slots),
+      ],
+    );
+  }
+
+  Widget buildBodyTopBottom() {
+    return Column(
+      children: [
+        UserList(users: users),
+        SlotList(
+          maxSlots: maxSlots,
+          slots: slots,
+          showBodySideBySide: showBodySideBySide,
+        ),
+      ],
     );
   }
 }
@@ -49,7 +117,7 @@ class MyApp extends StatelessWidget {
 class UserList extends StatelessWidget {
   final List<User> users;
 
-  UserList({required this.users});
+  const UserList({super.key, required this.users});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +162,7 @@ class UserList extends StatelessWidget {
 class UserTile extends StatelessWidget {
   final User user;
 
-  UserTile({required this.user});
+  const UserTile({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -111,8 +179,13 @@ class UserTile extends StatelessWidget {
 class SlotList extends StatefulWidget {
   final int maxSlots;
   final List<Slot> slots;
+  final bool showBodySideBySide;
 
-  SlotList({required this.maxSlots, required this.slots});
+  const SlotList(
+      {super.key,
+      required this.maxSlots,
+      required this.slots,
+      required this.showBodySideBySide});
 
   @override
   createState() => _SlotListState();
@@ -134,6 +207,7 @@ class _SlotListState extends State<SlotList> {
               child: Wrap(
                 children: widget.slots.map((slot) {
                   return SlotWidget(
+                    showBodySideBySide: widget.showBodySideBySide,
                     maxSlots: widget.maxSlots,
                     slot: slot,
                     onSlotUpdated: () {
@@ -154,12 +228,16 @@ class SlotWidget extends StatefulWidget {
   final int maxSlots;
   final Slot slot;
   final Function onSlotUpdated;
+  final bool showBodySideBySide;
 
+  @override
   createState() => _SlotWidgetState();
-  SlotWidget(
-      {required this.maxSlots,
+  const SlotWidget(
+      {super.key,
+      required this.maxSlots,
       required this.slot,
-      required this.onSlotUpdated});
+      required this.onSlotUpdated,
+      required this.showBodySideBySide});
 }
 
 class _SlotWidgetState extends State<SlotWidget> {
@@ -169,7 +247,9 @@ class _SlotWidgetState extends State<SlotWidget> {
       builder: (context, List<User?> incoming, List<dynamic> rejected) {
         return SizedBox(
           height: 200,
-          width: MediaQuery.of(context).size.width,
+          width: widget.showBodySideBySide
+              ? MediaQuery.of(context).size.width
+              : MediaQuery.of(context).size.width / 4,
           child: Card(
             elevation: 2,
             child: Column(
@@ -225,6 +305,38 @@ class _SlotWidgetState extends State<SlotWidget> {
           widget.onSlotUpdated();
         });
       },
+    );
+  }
+}
+
+class PrintSlotAllocationButton extends StatelessWidget {
+  final List<Slot> slots;
+
+  PrintSlotAllocationButton({super.key, required this.slots});
+
+  void printSlotAllocation() {
+    final Map<String, List<String>> slotAllocation = {};
+
+    for (int i = 0; i < slots.length; i++) {
+      final slot = slots[i];
+      final List<String> userNames = [];
+
+      for (int j = 0; j < slot.users.length; j++) {
+        final user = slot.users[j];
+        userNames.add("${user.id}");
+      }
+
+      slotAllocation["Slot ${slot.id + 1}"] = userNames;
+    }
+
+    print(slotAllocation);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: printSlotAllocation,
+      child: const Text('Print Slot Allocation'),
     );
   }
 }
